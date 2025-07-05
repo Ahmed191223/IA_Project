@@ -1,12 +1,4 @@
-# -*- coding: utf-8 -*-
-"""
-Script de prédiction des résultats de matchs de football
-Auteur : Yess
-Date : 05/07/2025
-Ce script entraîne deux modèles :
-- un pour prédire le résultat (victoire ou non)
-- un pour estimer la possession de balle des deux équipes
-"""
+ 
 
 # Importation des bibliothèques nécessaires
 import pandas as pd                      # pour manipuler les données tabulaires
@@ -17,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor  # mo
 import joblib                            # pour sauvegarder et recharger les modèles
 
 # === Chemins et fichiers de configuration ===
-DATA_DIR = r"C:\Users\computer house 41\Desktop\tek-up\Projet IA"  # Dossier contenant les données
+DATA_DIR = os.path.dirname(os.path.abspath(__file__))
 CSV_FILENAME = "results.csv"               # Fichier CSV avec les résultats des matchs
 MODEL_FILE_RESULT = "modele_foot.pkl"      # Fichier pour sauvegarder le modèle de résultat
 MODEL_FILE_POSSESSION = "modele_possession.pkl"  # Fichier pour sauvegarder le modèle de possession
@@ -118,23 +110,17 @@ def extraire_caracteristiques(team1, team2, df_matches):
 
     return [[t1_avg, t2_avg, diff]], n, description
 
-# === Fonction de prédiction d’un match ===
 def predire_match(team1, team2):
     """
     Fonction principale pour prédire le résultat et la possession d’un match
-    entre deux équipes données.
+    entre deux équipes données. Retourne un dictionnaire avec les infos.
     """
-    print(f"\n=== Prédiction entre {team1} et {team2} ===")
-
     # Récupération des features + historique
     features, n_matchs, resume = extraire_caracteristiques(team1, team2, df)
     if not features:
-        return  # Arrêt si aucune donnée
+        return {"error": "Aucune donnée disponible pour cette confrontation."}
 
-    print(f"[📘] {n_matchs} confrontation(s) historique(s) entre {team1.title()} et {team2.title()}")
-    print(f"[📝] {resume}")
-
-    # Chargement des modèles depuis disque
+    # Chargement des modèles
     clf = joblib.load(MODEL_FILE_RESULT)
     reg = joblib.load(MODEL_FILE_POSSESSION)
 
@@ -144,24 +130,31 @@ def predire_match(team1, team2):
     # Prédiction de la possession pour team1
     p1 = reg.predict(features)[0]
 
-    # On inverse les features pour estimer la possession de l'autre équipe
+    # Inverser les features pour team2
     features_inv = [[features[0][1], features[0][0], -features[0][2]]]
     p2 = reg.predict(features_inv)[0]
 
-    # Normalisation pour que la somme approche 100 %
+    # Normaliser la possession
     total = p1 + p2
     p1_norm = (p1 / total) * 100
     p2_norm = (p2 / total) * 100
 
-    # Affichage du résultat final
+    # Résumé gagnant
     if gagnant == 1:
-        print(f"[🎯] {team1.title()} a plus de chances de remporter le match.")
+        gagnant_txt = f"{team1.title()} a plus de chances de remporter le match."
     else:
-        print(f"[🎯] {team2.title()} semble favori ou un match nul est probable.")
+        gagnant_txt = f"{team2.title()} semble favori ou un match nul est probable."
 
-    print("[📊] Possession estimée :")
-    print(f"   - {team1.title()} : {p1_norm:.2f}%")
-    print(f"   - {team2.title()} : {p2_norm:.2f}%")
+    # Retour sous forme de dictionnaire
+    return {
+        "resume": resume,
+        "confrontations": n_matchs,
+        "gagnant": gagnant_txt,
+        "possession": {
+            team1: round(p1_norm, 2),
+            team2: round(p2_norm, 2)
+        }
+    }
 
 # === Lancement du script principal ===
 if __name__ == "__main__":
