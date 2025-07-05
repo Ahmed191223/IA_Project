@@ -48,12 +48,17 @@ if team1 == team2:
 else:
     resultat = ModelIA.predire_match(team1, team2)
 
-    if "error" in resultat:
+    if resultat["error"]:
        st.error(resultat["error"])
     else:
-        st.success(resultat["gagnant"])
-        st.markdown(f"📘 Confrontations historiques : {resultat['confrontations']}")
+        st.success(resultat["prediction"])
+        st.markdown(f"📘 Confrontations : {resultat['confrontations']}")
         st.markdown(f"📝 Résumé : {resultat['resume']}")
+
         st.markdown("📊 **Possession estimée :**")
-        st.markdown(f"- {team1} : {resultat['possession'][team1]}%")
-        st.markdown(f"- {team2} : {resultat['possession'][team2]}%")
+        for team, possession in resultat["possession"].items():
+            st.markdown(f"- {team} : {possession}%")
+
+        st.markdown("⚽ **Score prédit :**")
+        for team, score in resultat["scores"].items():
+            st.markdown(f"- {team} : {score} but(s)")
